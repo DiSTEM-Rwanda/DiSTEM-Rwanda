@@ -3,6 +3,7 @@ import Hero from './components/Hero'
 import About from './components/About'
 import Learning from './components/Learning'
 import Teachers from './components/Teachers'
+import Auth from './components/Auth'
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <About />
         <Learning />
         <Teachers />
+        <Auth />
       </main>
 
       <footer>
