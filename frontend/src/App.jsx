@@ -2,6 +2,7 @@ import Navbar from './components/Navbar'
 import Hero from './components/Hero'
 import About from './components/About'
 import Learning from './components/Learning'
+import Teachers from './components/Teachers'
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
         <Hero />
         <About />
         <Learning />
+        <Teachers />
       </main>
 
       <footer>
