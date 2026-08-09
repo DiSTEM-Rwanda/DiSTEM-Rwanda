@@ -4,6 +4,7 @@ import About from './components/About'
 import Learning from './components/Learning'
 import Teachers from './components/Teachers'
 import Auth from './components/Auth'
+import Dashboard from './components/Dashboard'
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
         <Learning />
         <Teachers />
         <Auth />
+        <Dashboard />
       </main>
 
       <footer>
