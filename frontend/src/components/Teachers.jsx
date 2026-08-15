@@ -1,6 +1,6 @@
 function Teachers() {
   return (
-    <section id="teachers" className="section teachers-section">
+    <section className="section teachers-section" id="teachers">
       <p className="eyebrow">For Teachers</p>
 
       <h2>Empowering teachers to teach better</h2>

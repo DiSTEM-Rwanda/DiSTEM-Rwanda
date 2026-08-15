@@ -1,6 +1,6 @@
 function Learning() {
   return (
-    <section id="learning" className="section learning-section">
+    <section className="section learning-section" id="learning">
       <p className="eyebrow">Explore STEM</p>
 
       <h2>Learn. Explore. Discover.</h2>
@@ -15,37 +15,54 @@ function Learning() {
         <div className="learning-card">
           <span>📐</span>
           <h3>Mathematics</h3>
-          <p>Explore numbers, algebra, geometry, statistics and more.</p>
+          <p>
+            Explore numbers, algebra, geometry, statistics and more.
+          </p>
         </div>
 
         <div className="learning-card">
           <span>⚡</span>
           <h3>Physics</h3>
-          <p>Discover forces, energy, motion, electricity and the world around us.</p>
+          <p>
+            Discover forces, energy, motion, electricity and the world
+            around us.
+          </p>
         </div>
 
         <div className="learning-card">
           <span>🧪</span>
           <h3>Chemistry</h3>
-          <p>Learn about matter, reactions, elements and chemical processes.</p>
+          <p>
+            Learn about matter, reactions, elements and chemical
+            processes.
+          </p>
         </div>
 
         <div className="learning-card">
           <span>🧬</span>
           <h3>Biology</h3>
-          <p>Explore living organisms, cells, ecosystems and human biology.</p>
+          <p>
+            Explore living organisms, cells, ecosystems and human
+            biology.
+          </p>
         </div>
 
         <div className="learning-card">
           <span>💻</span>
           <h3>Technology</h3>
-          <p>Develop digital skills, computational thinking and innovation.</p>
+          <p>
+            Develop digital skills, computational thinking and
+            innovation.
+          </p>
         </div>
 
         <div className="learning-card">
           <span>🔬</span>
           <h3>STEM Projects</h3>
-          <p>Apply knowledge through practical projects and problem-solving.</p>
+          <p>
+            Apply knowledge through practical projects and
+            problem-solving.
+          </p>
         </div>
       </div>
     </section>
