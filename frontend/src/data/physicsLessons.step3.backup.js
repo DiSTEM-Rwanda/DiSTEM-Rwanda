@@ -213,17 +213,6 @@ const physicsLessons = {
         topic: 'Speed and Average Speed',
         course: 'Physics',
         level: 'Secondary School',
-        video: {
-  title: 'Understanding Speed',
-  description:
-    'A short explanation of distance, time and average speed.',
-},
-
-simulation: {
-  title: 'Explore Speed',
-  description:
-    'Change distance and time to explore how average speed changes.',
-},
 
         objectives: [
           'Define speed.',

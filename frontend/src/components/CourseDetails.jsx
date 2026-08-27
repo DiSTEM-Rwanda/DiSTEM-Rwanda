@@ -1,257 +1,407 @@
-function CourseDetails({ course, onStartLesson }) {
+function CourseDetails({ course, onStartLesson, completedLessons = [], progress = 0 }) {
   if (!course) {
     return null
   }
 
-  const topics = {
-    Mathematics: [
-      {
-        title: 'Algebra Fundamentals',
-        description:
-          'Learn variables, expressions, equations and inequalities.',
-      },
-      {
-        title: 'Geometry',
-        description:
-          'Explore shapes, angles, measurements and geometric reasoning.',
-      },
-      {
-        title: 'Statistics',
-        description:
-          'Understand data, graphs, averages and basic probability.',
-      },
-      {
-        title: 'Problem Solving',
-        description:
-          'Apply mathematical thinking to real-world problems.',
-      },
-    ],
+  /*
+   * ============================================================
+   * COURSE LESSONS
+   * ============================================================
+   *
+   * App.jsx provides the real lessons through:
+   *
+   * course.lessons
+   *
+   * This keeps CourseDetails independent from individual
+   * subject data files.
+   */
 
-    Physics: [
-      {
-        title: 'Motion',
-        description:
-          'Understand distance, displacement, speed, velocity and acceleration.',
-      },
-      {
-        title: 'Forces',
-        description:
-          "Explore forces, Newton's laws and how objects interact.",
-      },
-      {
-        title: 'Energy',
-        description:
-          'Learn about kinetic energy, potential energy and energy transformations.',
-      },
-      {
-        title: 'Electricity',
-        description:
-          'Explore electric current, voltage, resistance and simple circuits.',
-      },
-    ],
+  const lessons = Array.isArray(course.lessons)
+    ? course.lessons
+    : []
 
-    Chemistry: [
-      {
-        title: 'Matter',
-        description:
-          'Understand solids, liquids, gases and changes of state.',
-      },
-      {
-        title: 'Elements',
-        description:
-          'Explore elements, atoms and the periodic table.',
-      },
-      {
-        title: 'Chemical Reactions',
-        description:
-          'Learn how substances combine and transform during reactions.',
-      },
-      {
-        title: 'Acids and Bases',
-        description:
-          'Explore acids, bases, indicators and everyday applications.',
-      },
-    ],
+  /*
+   * ============================================================
+   * GROUP LESSONS INTO UNITS
+   * ============================================================
+   *
+   * Real lesson data normally contains unit information through
+   * the structure supplied by the subject data file.
+   *
+   * If App.jsx has already supplied grouped data, use it.
+   * Otherwise create one unit from course.topics / lessons.
+   */
 
-    Biology: [
-      {
-        title: 'Cells',
-        description:
-          'Explore cell structures and their functions.',
-      },
-      {
-        title: 'Living Organisms',
-        description:
-          'Understand the characteristics and classification of organisms.',
-      },
-      {
-        title: 'Ecosystems',
-        description:
-          'Explore relationships between organisms and their environment.',
-      },
-      {
-        title: 'Human Biology',
-        description:
-          'Learn about major human body systems and their functions.',
-      },
-    ],
+  let courseUnits = []
 
-    Technology: [
-      {
-        title: 'Digital Skills',
-        description:
-          'Develop essential computer and digital literacy skills.',
-      },
-      {
-        title: 'Computational Thinking',
-        description:
-          'Learn logical thinking, algorithms and problem-solving.',
-      },
-      {
-        title: 'Programming',
-        description:
-          'Explore programming concepts and computational creativity.',
-      },
-      {
-        title: 'Innovation',
-        description:
-          'Apply technology to design solutions to real-world problems.',
-      },
-    ],
+  if (Array.isArray(course.units) && course.units.length > 0) {
+    courseUnits = course.units
+  } else {
+    /*
+     * Build units from lesson.unit when available.
+     */
 
-    'STEM Projects': [
-      {
-        title: 'Project Design',
-        description:
-          'Learn how to identify problems and design STEM solutions.',
-      },
-      {
-        title: 'Investigation',
-        description:
-          'Develop research, observation and experimentation skills.',
-      },
-      {
-        title: 'Building Solutions',
-        description:
-          'Create practical solutions using STEM knowledge.',
-      },
-      {
-        title: 'Project Presentation',
-        description:
-          'Communicate your findings, solutions and project results.',
-      },
-    ],
-  }
+    const groupedUnits = []
 
-  const courseTopics = topics[course.title] || []
+    lessons.forEach((lesson) => {
+      const unitName =
+        lesson.unit ||
+        lesson.unitTitle ||
+        'Course Lessons'
 
-  function handleStartLesson(topic) {
-    if (onStartLesson) {
-      onStartLesson({
-        course: course.title,
-        topic: topic.title,
-      })
+      let existingUnit = groupedUnits.find(
+        (unit) => unit.unit === unitName
+      )
+
+      if (!existingUnit) {
+        existingUnit = {
+          unit: unitName,
+          lessons: [],
+        }
+
+        groupedUnits.push(existingUnit)
+      }
+
+      existingUnit.lessons.push(lesson)
+    })
+
+    courseUnits = groupedUnits
+
+    /*
+     * If no unit information exists, keep all lessons together.
+     */
+
+    if (courseUnits.length === 0 && lessons.length > 0) {
+      courseUnits = [
+        {
+          unit: course.title,
+          lessons,
+        },
+      ]
     }
   }
+
+  /*
+   * ============================================================
+   * TOTAL LESSONS
+   * ============================================================
+   */
+
+  const totalLessons = courseUnits.reduce(
+    (total, unit) =>
+      total +
+      (Array.isArray(unit?.lessons)
+        ? unit.lessons.length
+        : 0),
+    0
+  )
+
+  /*
+   * ============================================================
+   * CREATE FALLBACK LESSON ID
+   * ============================================================
+   */
+
+  function createLessonId(value) {
+    const safeValue =
+      value ||
+      'lesson'
+
+    return `${course.title}-${safeValue}`
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+  }
+
+  /*
+   * ============================================================
+   * START LESSON
+   * ============================================================
+   */
+
+  function handleStartLesson(lesson) {
+    if (!onStartLesson || !lesson) {
+      return
+    }
+
+    const lessonTitle =
+      lesson.title ||
+      lesson.topic ||
+      'Untitled Lesson'
+
+    const lessonTopic =
+      lesson.topic ||
+      lesson.title ||
+      'Untitled Lesson'
+
+    /*
+     * IMPORTANT:
+     *
+     * Preserve the real lesson ID whenever one exists.
+     *
+     * This is especially important for Chemistry, Physics,
+     * Mathematics and Biology lesson data.
+     */
+
+    const lessonId =
+      lesson.id ||
+      createLessonId(lessonTopic)
+
+    onStartLesson({
+      ...lesson,
+
+      id: lessonId,
+
+      course:
+        lesson.course ||
+        course.title,
+
+      topic:
+        lessonTopic,
+
+      title:
+        lessonTitle,
+
+      description:
+        lesson.description ||
+        '',
+    })
+  }
+
+  /*
+   * ============================================================
+   * START COURSE
+   * ============================================================
+   */
 
   function handleStartCourse() {
-    if (onStartLesson) {
-      onStartLesson({
-        course: course.title,
-        topic: 'Course Introduction',
-      })
+    if (!onStartLesson) {
+      return
     }
+
+    if (!courseUnits.length) {
+      return
+    }
+
+    const firstUnit = courseUnits[0]
+
+    if (
+      !firstUnit ||
+      !Array.isArray(firstUnit.lessons) ||
+      firstUnit.lessons.length === 0
+    ) {
+      return
+    }
+
+    handleStartLesson(
+      firstUnit.lessons[0]
+    )
   }
+
+  /*
+   * ============================================================
+   * RENDER
+   * ============================================================
+   */
+
+  let lessonNumber = 0
 
   return (
     <section
       className="course-details-section"
       id="course-details"
     >
+      {/* ======================================================
+          COURSE HERO
+          ====================================================== */}
+
       <div className="course-details-hero">
         <div className="course-details-icon">
           {course.icon}
         </div>
 
         <div>
-          <p className="eyebrow">{course.level}</p>
+          <p className="eyebrow">
+            {course.level}
+          </p>
 
-          <h2>{course.title}</h2>
+          <h2>
+            {course.title}
+          </h2>
 
-          <p>{course.description}</p>
+          <p>
+            {course.description}
+          </p>
 
           <div className="course-meta">
-            <span>📚 {course.lessons} lessons</span>
-            <span>🌐 Offline Ready</span>
-            <span>🎓 Secondary School</span>
+            <span>
+              📚 {totalLessons} lessons
+            </span>
+
+            <span>
+              🌐 Offline Ready
+            </span>
+
+            <span>
+              🎓 Secondary School
+            </span>
           </div>
         </div>
       </div>
 
+      {/* ======================================================
+          COURSE CONTENT
+          ====================================================== */}
+
       <div className="course-details-content">
+
+        {/* ====================================================
+            COURSE OVERVIEW
+            ==================================================== */}
+
         <div className="course-overview">
-          <h3>Course Overview</h3>
+          <h3>
+            Course Overview
+          </h3>
 
           <div className="topic-list">
-            {courseTopics.map((topic, index) => (
-              <div
-                className="topic-item"
-                key={topic.title}
-              >
-                <span className="topic-number">
-                  {index + 1}
-                </span>
 
-                <div>
-                  <h4>{topic.title}</h4>
-
-                  <p>{topic.description}</p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => handleStartLesson(topic)}
-                >
-                  Start Lesson
-                </button>
+            {courseUnits.length === 0 ? (
+              <div className="course-empty-state">
+                <p>
+                  No lessons are available for this course yet.
+                </p>
               </div>
-            ))}
+            ) : (
+              courseUnits.map(
+                (unit, unitIndex) => (
+                  <div
+                    className="course-unit"
+                    key={`${course.id}-unit-${unitIndex}`}
+                  >
+                    <h3 className="course-unit-title">
+                      {unit.unit ||
+                        unit.title ||
+                        `Unit ${unitIndex + 1}`}
+                    </h3>
+
+                    {(
+                      Array.isArray(unit.lessons)
+                        ? unit.lessons
+                        : []
+                    ).map(
+                      (lesson, lessonIndex) => {
+                        lessonNumber += 1
+
+                        const lessonId =
+                          lesson.id ||
+                          createLessonId(
+                            lesson.topic ||
+                            lesson.title ||
+                            `lesson-${lessonNumber}`
+                          )
+
+                        const isCompleted = completedLessons.includes(lessonId)
+
+                        return (
+                          <div
+                            className={`topic-item ${isCompleted ? 'is-completed' : ''}`}
+                            key={`${lessonId}-${unitIndex}-${lessonIndex}`}
+                          >
+                            <span className="topic-number">
+                              {isCompleted ? '✓' : lessonNumber}
+                            </span>
+
+                            <div>
+                              <h4>
+                                {lesson.title ||
+                                  lesson.topic ||
+                                  `Lesson ${lessonNumber}`}
+                              </h4>
+
+                              <p>
+                                {lesson.description ||
+                                  'Learn and explore this topic.'}
+                              </p>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleStartLesson(
+                                  lesson
+                                )
+                              }
+                              disabled={
+                                !onStartLesson
+                              }
+                            >
+                              {isCompleted ? 'Review Lesson' : 'Start Lesson'}
+                            </button>
+                          </div>
+                        )
+                      }
+                    )}
+                  </div>
+                )
+              )
+            )}
+
           </div>
         </div>
 
+        {/* ====================================================
+            COURSE PROGRESS CARD
+            ==================================================== */}
+
         <div className="course-progress-card">
+
           <span className="course-progress-icon">
             🚀
           </span>
 
-          <h3>Ready to learn?</h3>
+          <h3>
+            Ready to learn?
+          </h3>
 
           <p>
-            Start exploring this course and build your STEM
-            knowledge step by step.
+            Start exploring this course and build
+            your STEM knowledge step by step.
           </p>
 
           <div className="course-progress">
+
             <div className="progress-label">
-              <span>Course Progress</span>
-              <span>0%</span>
+              <span>
+                Course Progress
+              </span>
+
+              <span>{progress}%</span>
             </div>
 
             <div className="progress-bar">
               <div
                 className="progress-fill"
-                style={{ width: '0%' }}
-              ></div>
+                style={{
+                  width: `${progress}%`,
+                }}
+              />
             </div>
+
           </div>
 
           <button
             type="button"
             className="start-course-button"
             onClick={handleStartCourse}
+            disabled={
+              courseUnits.length === 0 ||
+              !onStartLesson
+            }
           >
             Start Course
           </button>
+
         </div>
       </div>
     </section>

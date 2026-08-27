@@ -1,6 +1,7 @@
-function Courses({ onSelectCourse }) {
-  const courses = [
+function Courses({ onSelectCourse, courses: suppliedCourses }) {
+  const fallbackCourses = [
     {
+      id: 'mathematics',
       icon: '📐',
       title: 'Mathematics',
       description:
@@ -9,6 +10,7 @@ function Courses({ onSelectCourse }) {
       lessons: 24,
     },
     {
+      id: 'physics',
       icon: '⚡',
       title: 'Physics',
       description:
@@ -17,6 +19,7 @@ function Courses({ onSelectCourse }) {
       lessons: 20,
     },
     {
+      id: 'chemistry',
       icon: '🧪',
       title: 'Chemistry',
       description:
@@ -25,6 +28,7 @@ function Courses({ onSelectCourse }) {
       lessons: 22,
     },
     {
+      id: 'biology',
       icon: '🧬',
       title: 'Biology',
       description:
@@ -33,6 +37,7 @@ function Courses({ onSelectCourse }) {
       lessons: 26,
     },
     {
+      id: 'technology',
       icon: '💻',
       title: 'Technology',
       description:
@@ -41,6 +46,7 @@ function Courses({ onSelectCourse }) {
       lessons: 18,
     },
     {
+      id: 'stem-projects',
       icon: '🔬',
       title: 'STEM Projects',
       description:
@@ -50,23 +56,10 @@ function Courses({ onSelectCourse }) {
     },
   ]
 
-  function handleSelectCourse(course) {
-    onSelectCourse(course)
-
-    setTimeout(() => {
-      document
-        .getElementById('course-details')
-        ?.scrollIntoView({
-          behavior: 'smooth',
-        })
-    }, 50)
-  }
+  const courses = suppliedCourses?.length ? suppliedCourses : fallbackCourses
 
   return (
-    <section
-      className="courses-section"
-      id="courses"
-    >
+    <section id="courses" className="courses-section">
       <div className="courses-header">
         <p className="eyebrow">
           STEM Courses
@@ -84,18 +77,16 @@ function Courses({ onSelectCourse }) {
       </div>
 
       <div className="course-grid">
-
         {courses.map((course) => (
           <article
             className="course-card"
-            key={course.title}
+            key={course.id}
           >
             <div className="course-card-icon">
               {course.icon}
             </div>
 
             <div className="course-card-content">
-
               <span className="course-level">
                 {course.level}
               </span>
@@ -109,25 +100,20 @@ function Courses({ onSelectCourse }) {
               </p>
 
               <div className="course-card-footer">
-
                 <span>
                   📚 {course.lessons} lessons
                 </span>
 
                 <button
                   type="button"
-                  onClick={() =>
-                    handleSelectCourse(course)
-                  }
+                  onClick={() => onSelectCourse(course)}
                 >
                   Start Course
                 </button>
-
               </div>
             </div>
           </article>
         ))}
-
       </div>
     </section>
   )

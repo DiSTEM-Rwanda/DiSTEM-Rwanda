@@ -1,4 +1,16 @@
-function Hero() {
+import { useNavigate } from 'react-router'
+
+function Hero({ user }) {
+  const navigate = useNavigate()
+
+  function goTo(id) {
+    if (id === 'courses' && user) {
+      navigate('/courses')
+      return
+    }
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   return (
     <section className="hero" id="home">
       <div className="hero-content">
@@ -7,9 +19,8 @@ function Hero() {
         </p>
 
         <h1>
-          Learn STEM.
-          <br />
-          <span>Anywhere. Anytime.</span>
+          Offline today.<br />
+          <span>Future ready tomorrow.</span>
         </h1>
 
         <p className="hero-text">
@@ -19,11 +30,11 @@ function Hero() {
         </p>
 
         <div className="hero-buttons">
-          <button className="primary-button">
-            Start Learning
+          <button type="button" className="primary-button" onClick={() => goTo(user ? 'courses' : 'auth')}>
+            {user ? 'Explore Courses' : 'Start Learning'}
           </button>
 
-          <button className="secondary-button">
+          <button type="button" className="secondary-button" onClick={() => goTo('learning')}>
             Explore DiSTEM
           </button>
         </div>
