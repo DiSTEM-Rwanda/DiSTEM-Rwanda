@@ -217,7 +217,7 @@ function RegisterForm({ firstName, setFirstName, lastName, setLastName, register
   )
 }
 
-function Auth({ onLogin }) {
+function Auth({ onLogin, onRegister }) {
   const [mode, setMode] = useState('login') // 'login', 'register', or 'forgot-password'
   
   // Login state
@@ -301,26 +301,14 @@ function Auth({ onLogin }) {
     setSubmitting(true)
     
     try {
-      await authService.register({
+      await onRegister({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         email: registerEmail.trim(),
         password: registerPassword
       })
       
-      // Account created successfully, show message and switch to login
-      setMessage('Account created. Please check your email to verify your account before signing in.')
-      
-      // Reset form and switch to login mode
-      setTimeout(() => {
-        setMode('login')
-        setFirstName('')
-        setLastName('')
-        setRegisterEmail('')
-        setRegisterPassword('')
-        setConfirmPassword('')
-        setErrors({})
-      }, 500)
+      setMessage('Account created on this device. You are now signed in and can continue learning offline.')
     } catch (error) {
       if (error.status === 409) {
         setMessage('An account with this email already exists. Please sign in instead.')

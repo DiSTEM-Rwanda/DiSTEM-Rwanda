@@ -17,7 +17,7 @@ function Footer() {
       </div>
       <div className="footer-links">
         <div><h2>Explore</h2><button type="button" onClick={() => goHome('about')}>About DiSTEM</button><button type="button" onClick={() => navigate('/courses')}>Courses</button></div>
-        <div><h2>Learning</h2><button type="button" onClick={() => goHome('learning')}>STEM subjects</button><button type="button" onClick={() => goHome('teachers')}>For teachers</button></div>
+        <div><h2>Learning</h2><button type="button" onClick={() => goHome('learning')}>STEM subjects</button></div>
       </div>
       <p className="copyright">© {new Date().getFullYear()} DiSTEM Rwanda. All rights reserved.</p>
     </footer>

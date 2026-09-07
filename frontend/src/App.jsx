@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import {
   Routes,
   Route,
@@ -13,7 +13,6 @@ import Navbar from './components/Navbar'
 import Hero from './components/Hero'
 import About from './components/About'
 import Learning from './components/Learning'
-import Teachers from './components/Teachers'
 import Auth from './components/Auth'
 import ForgotPassword from './components/ForgotPassword'
 import ResetPassword from './components/ResetPassword'
@@ -24,11 +23,19 @@ import CourseDetails from './components/CourseDetails'
 import Lesson from './components/Lesson'
 import Footer from './components/Footer'
 import { authService } from './services/authService'
+import { authenticateLocally, clearLocalSession, createLocalAccount, getLocalSession, initializeLocalCredential } from './services/localAuth'
+import { completeLesson, getCompletedLessons } from './services/progressStore'
+import { completeExperiment, getCompletedExperiments } from './services/labProgressStore'
+import { synchronizePendingProgress } from './services/syncService'
 
 import physicsLessons from './data/physicsLessons'
 import chemistryLessons from './data/chemistryLessons'
 import mathematicsLessons from './data/mathematicsLessons'
 import biologyLessons from './data/biologyLessons'
+import technologyLessons from './data/technologyLessons'
+import stemProjectsLessons from './data/stemProjectsLessons'
+
+const VirtualLab = lazy(() => import('./components/VirtualLab'))
 
 
 // ============================================================
@@ -59,6 +66,18 @@ function getBiologyLessons() {
   )
 }
 
+function getTechnologyLessons() {
+  return Object.values(technologyLessons).flatMap(
+    (unit) => unit.lessons || []
+  )
+}
+
+function getStemProjectsLessons() {
+  return Object.values(stemProjectsLessons).flatMap(
+    (unit) => unit.lessons || []
+  )
+}
+
 
 // ============================================================
 // ALL REAL LESSONS
@@ -70,6 +89,8 @@ function getAllLessons() {
     ...getChemistryLessons(),
     ...getMathematicsLessons(),
     ...getBiologyLessons(),
+    ...getTechnologyLessons(),
+    ...getStemProjectsLessons(),
   ]
 }
 
@@ -214,7 +235,7 @@ function getCourses() {
       description:
         'Explore numbers, algebra, geometry, statistics and problem-solving.',
       level: 'Secondary School',
-      lessons: getMathematicsLessons().length || 24,
+      lessons: getMathematicsLessons().length,
     },
 
     {
@@ -224,7 +245,7 @@ function getCourses() {
       description:
         'Discover motion, forces, energy, electricity and the physical world.',
       level: 'Secondary School',
-      lessons: getPhysicsLessons().length || 20,
+      lessons: getPhysicsLessons().length,
     },
 
     {
@@ -234,7 +255,7 @@ function getCourses() {
       description:
         'Learn about matter, elements, reactions and chemical processes.',
       level: 'Secondary School',
-      lessons: getChemistryLessons().length || 22,
+      lessons: getChemistryLessons().length,
     },
 
     {
@@ -244,7 +265,7 @@ function getCourses() {
       description:
         'Explore cells, organisms, ecosystems and human biology.',
       level: 'Secondary School',
-      lessons: getBiologyLessons().length || 26,
+      lessons: getBiologyLessons().length,
     },
 
     {
@@ -254,7 +275,7 @@ function getCourses() {
       description:
         'Develop digital skills, computational thinking and innovation.',
       level: 'Secondary School',
-      lessons: 18,
+      lessons: getTechnologyLessons().length,
     },
 
     {
@@ -264,7 +285,7 @@ function getCourses() {
       description:
         'Apply STEM knowledge through practical projects and challenges.',
       level: 'Project Based',
-      lessons: 12,
+      lessons: getStemProjectsLessons().length,
     },
   ]
 }
@@ -360,6 +381,12 @@ function getLessonsForCourse(courseId) {
     case 'biology':
       return getBiologyLessons()
 
+    case 'technology':
+      return getTechnologyLessons()
+
+    case 'stem-projects':
+      return getStemProjectsLessons()
+
     default:
       return []
   }
@@ -387,7 +414,7 @@ function ForgotPasswordPage() {
 // HOME PAGE
 // ============================================================
 
-function HomePage({ user, onLogin }) {
+function HomePage({ user, onLogin, onRegister }) {
   return (
     <>
       <section id="home">
@@ -402,13 +429,9 @@ function HomePage({ user, onLogin }) {
         <Learning />
       </section>
 
-      <section id="teachers">
-        <Teachers />
-      </section>
-
       {!user && (
         <section id="auth">
-          <Auth onLogin={onLogin} />
+          <Auth onLogin={onLogin} onRegister={onRegister} />
         </section>
       )}
     </>
@@ -435,9 +458,6 @@ function LearningHomePage({ user }) {
         <Learning />
       </section>
 
-      <section id="teachers">
-        <Teachers />
-      </section>
     </>
   )
 }
@@ -450,6 +470,7 @@ function LearningHomePage({ user }) {
 function DashboardPage({
   completedLessons,
   calculateCourseProgress,
+  completedExperimentCount,
 }) {
   const navigate = useNavigate()
 
@@ -514,6 +535,8 @@ function DashboardPage({
         totalCompleted={
           completedLessons.length
         }
+        completedExperimentCount={completedExperimentCount}
+        onOpenLab={() => navigate('/virtual-lab')}
       />
     </section>
   )
@@ -676,6 +699,8 @@ function CourseDetailsPage({
           completedLessons
         }
         progress={progress}
+        hasRelatedExperiments={['Physics', 'Chemistry'].includes(course.title)}
+        onOpenVirtualLab={() => navigate('/virtual-lab')}
       />
     </section>
   )
@@ -883,53 +908,108 @@ function App() {
 
   const [user, setUser] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
+  const [networkOnline, setNetworkOnline] = useState(() => navigator.onLine)
+  const [backendAvailable, setBackendAvailable] = useState(false)
 
   useEffect(() => {
-    authService.me().then(({ user: currentUser }) => setUser(currentUser)).catch(() => setUser(null)).finally(() => setAuthLoading(false))
+    let active = true
+    async function restoreSession() {
+      let localUser = null
+      try {
+        localUser = await getLocalSession()
+        if (active && localUser) setUser(localUser)
+      } catch {
+        // IndexedDB may be unavailable in a private or restricted browser context.
+      } finally {
+        if (active) setAuthLoading(false)
+      }
+      // A local session is authoritative. This prevents a stale server cookie
+      // from logging the interface back in after a user signs out locally.
+      // Do not probe or merge server state during an offline startup. The
+      // locally restored session remains sufficient for offline learning.
+      if (!localUser || !navigator.onLine) return
+      try {
+        const { user: currentUser } = await authService.me()
+        if (!active) return
+        setBackendAvailable(navigator.onLine)
+        // Keep the device-local account ID stable. Progress records are keyed
+        // to this ID, while serverId identifies the corresponding API account.
+        setUser((savedLocalUser) => savedLocalUser ? { ...savedLocalUser, ...currentUser, id: savedLocalUser.id, serverId: currentUser.id || savedLocalUser.serverId } : currentUser)
+      } catch {
+        if (active) setBackendAvailable(false)
+      }
+    }
+    restoreSession()
+    const checkBackend = () => {
+      if (!navigator.onLine) {
+        if (active) {
+          setNetworkOnline(false)
+          setBackendAvailable(false)
+        }
+        return
+      }
+      if (active) setNetworkOnline(true)
+      authService.health().then(() => active && setBackendAvailable(navigator.onLine)).catch(() => active && setBackendAvailable(false))
+    }
+    checkBackend()
+    window.addEventListener('online', checkBackend)
+    const markOffline = () => {
+      if (active) {
+        setNetworkOnline(false)
+        setBackendAvailable(false)
+      }
+    }
+    window.addEventListener('offline', markOffline)
+    return () => { active = false; window.removeEventListener('online', checkBackend); window.removeEventListener('offline', markOffline) }
   }, [])
 
   // ==========================================================
   // COMPLETED LESSONS
   // ==========================================================
 
-  const [
-    completedLessons,
-    setCompletedLessons,
-  ] = useState(() => {
-    try {
-      const oldProgress =
-        localStorage.getItem(
-          'distemCompletedLessons'
-        )
+  const [completedLessons, setCompletedLessons] = useState([])
+  const [progressLoading, setProgressLoading] = useState(true)
+  const [completedExperimentIds, setCompletedExperimentIds] = useState([])
 
-      const newProgress =
-        localStorage.getItem(
-          'distem-progress'
-        )
-
-      const saved =
-        oldProgress ||
-        newProgress
-
-      if (!saved) {
-        return []
-      }
-
-      const parsed =
-        JSON.parse(saved)
-
-      return Array.isArray(parsed)
-        ? parsed
-        : []
-    } catch (error) {
-      console.error(
-        'Unable to load completed lessons:',
-        error
-      )
-
-      return []
+  useEffect(() => {
+    let active = true
+    if (!user?.id) {
+      Promise.resolve().then(() => {
+        if (active) {
+          setCompletedLessons([])
+          setProgressLoading(false)
+        }
+      })
+      return undefined
     }
-  })
+    Promise.resolve().then(() => {
+      if (active) setProgressLoading(true)
+      return getCompletedLessons(user.id)
+    }).then((lessons) => {
+      if (active) setCompletedLessons(lessons)
+    }).catch(() => {
+      if (active) setCompletedLessons([])
+    }).finally(() => {
+      if (active) setProgressLoading(false)
+    })
+    return () => { active = false }
+  }, [user?.id])
+
+  useEffect(() => {
+    if (user?.id && user.serverId && backendAvailable && navigator.onLine) void synchronizePendingProgress(user.id)
+  }, [user?.id, user?.serverId, backendAvailable])
+
+  useEffect(() => {
+    let active = true
+    if (!user?.id) {
+      Promise.resolve().then(() => active && setCompletedExperimentIds([]))
+      return undefined
+    }
+    getCompletedExperiments(user.id)
+      .then((experiments) => active && setCompletedExperimentIds(experiments))
+      .catch(() => active && setCompletedExperimentIds([]))
+    return () => { active = false }
+  }, [user?.id])
 
   // ==========================================================
   // COURSE PROGRESS
@@ -983,12 +1063,13 @@ function App() {
   // COMPLETE LESSON
   // ==========================================================
 
-  function handleCompleteLesson(
+  async function handleCompleteLesson(
     lessonData
   ) {
     if (
       !lessonData ||
-      !lessonData.id
+      !lessonData.id ||
+      !user?.id
     ) {
       return
     }
@@ -996,42 +1077,13 @@ function App() {
     const lessonId =
       lessonData.id
 
-    setCompletedLessons(
-      (previousLessons) => {
-        if (
-          previousLessons.includes(
-            lessonId
-          )
-        ) {
-          return previousLessons
-        }
-
-        const updatedLessons = [
-          ...previousLessons,
-          lessonId,
-        ]
-
-        /*
-         * Keep both keys for compatibility
-         * with the existing application.
-         */
-        localStorage.setItem(
-          'distemCompletedLessons',
-          JSON.stringify(
-            updatedLessons
-          )
-        )
-
-        localStorage.setItem(
-          'distem-progress',
-          JSON.stringify(
-            updatedLessons
-          )
-        )
-
-        return updatedLessons
-      }
-    )
+    await completeLesson(user.id, lessonId)
+    setCompletedLessons((previousLessons) => (
+      previousLessons.includes(lessonId)
+        ? previousLessons
+        : [...previousLessons, lessonId]
+    ))
+    if (backendAvailable) void synchronizePendingProgress(user.id)
   }
 
   // ==========================================================
@@ -1039,7 +1091,23 @@ function App() {
   // ==========================================================
 
   async function handleLogin(credentials) {
-    const { user: userData } = await authService.login(credentials)
+    let userData
+    if (navigator.onLine) {
+      try {
+        const result = await authService.login(credentials)
+        setNetworkOnline(true)
+        setBackendAvailable(true)
+        userData = await initializeLocalCredential(credentials, result.user)
+      } catch (error) {
+        setBackendAvailable(false)
+        // An API connection or proxy routing failure must not prevent an
+        // initialized device account from signing in locally.
+        if (error.status && ![0, 404, 405, 502, 503, 504].includes(error.status) && error.status < 500) throw error
+        userData = await authenticateLocally(credentials)
+      }
+    } else {
+      userData = await authenticateLocally(credentials)
+    }
     setUser(userData)
 
     navigate('/dashboard')
@@ -1052,32 +1120,64 @@ function App() {
     }, 100)
   }
 
+  async function handleCompleteExperiment(experimentId) {
+    if (!user?.id || !experimentId) return
+    await completeExperiment(user.id, experimentId)
+    setCompletedExperimentIds((previousIds) => (
+      previousIds.includes(experimentId) ? previousIds : [...previousIds, experimentId]
+    ))
+    if (backendAvailable) void synchronizePendingProgress(user.id)
+  }
+
+  async function handleRegister(details) {
+    const localUser = await createLocalAccount(details)
+    setUser(localUser)
+    if (navigator.onLine) {
+      try {
+        const result = await authService.register(details)
+        setBackendAvailable(true)
+        const initialized = await initializeLocalCredential(details, result.user)
+        setUser(initialized)
+      } catch (error) {
+        // A local MVP account remains usable when the server is offline or unavailable.
+        if (error.status === 409) setBackendAvailable(true)
+        else setBackendAvailable(false)
+      }
+    }
+    navigate('/dashboard')
+  }
+
   // ==========================================================
   // LOGOUT
   // ==========================================================
 
-  async function handleLogout() {
-    await authService.logout()
+  function handleLogout() {
+    // React state changes first so the protected UI disappears immediately.
+    // Storage and server cleanup cannot hold the interface in an authenticated state.
     setUser(null)
-
     navigate('/')
-
-    setTimeout(() => {
+    window.setTimeout(() => {
       window.scrollTo({
         top: 0,
         behavior: 'smooth',
       })
     }, 100)
+
+    const localCleanup = clearLocalSession().catch(() => {})
+    const serverCleanup = backendAvailable
+      ? authService.logout().catch(() => {})
+      : Promise.resolve()
+    void Promise.all([localCleanup, serverCleanup])
   }
 
   // ==========================================================
   // APPLICATION
   // ==========================================================
 
-  if (authLoading) {
+  if (authLoading || (user && progressLoading)) {
     return (
       <div className="app">
-        <Navbar user={null} onLogout={handleLogout} />
+        <Navbar user={null} networkOnline={networkOnline} backendAvailable={backendAvailable} onLogout={handleLogout} />
         <main aria-busy="true" />
         <Footer />
       </div>
@@ -1089,6 +1189,8 @@ function App() {
 
       <Navbar
         user={user}
+        networkOnline={networkOnline}
+        backendAvailable={backendAvailable}
         onLogout={
           handleLogout
         }
@@ -1110,6 +1212,7 @@ function App() {
                 onLogin={
                   handleLogin
                 }
+                onRegister={handleRegister}
               />
             }
           />
@@ -1148,6 +1251,7 @@ function App() {
                   calculateCourseProgress={
                     calculateCourseProgress
                   }
+                  completedExperimentCount={completedExperimentIds.length}
                 />
               ) : (
                 <Navigate
@@ -1244,6 +1348,23 @@ function App() {
                   to="/"
                   replace
                 />
+              )
+            }
+          />
+
+          <Route
+            path="/virtual-lab/:experimentId?"
+            element={
+              user ? (
+                <Suspense fallback={<section className="learning-app-page" aria-busy="true" />}>
+                  <VirtualLab
+                    accountId={user.id}
+                    completedExperimentIds={completedExperimentIds}
+                    onCompleteExperiment={handleCompleteExperiment}
+                  />
+                </Suspense>
+              ) : (
+                <Navigate to="/" replace />
               )
             }
           />

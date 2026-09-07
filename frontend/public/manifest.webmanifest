@@ -1,0 +1,25 @@
+{
+  "name": "DiSTEM Rwanda",
+  "short_name": "DiSTEM Rwanda",
+  "description": "An offline-first STEM learning platform for secondary school learners in Rwanda.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#006b54",
+  "background_color": "#f5f8f7",
+  "icons": [
+    {
+      "src": "/icons/distem-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/distem-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

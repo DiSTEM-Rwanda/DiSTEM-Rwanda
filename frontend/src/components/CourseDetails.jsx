@@ -1,4 +1,4 @@
-function CourseDetails({ course, onStartLesson, completedLessons = [], progress = 0 }) {
+function CourseDetails({ course, onStartLesson, onOpenVirtualLab, hasRelatedExperiments = false, completedLessons = [], progress = 0 }) {
   if (!course) {
     return null
   }
@@ -401,6 +401,21 @@ function CourseDetails({ course, onStartLesson, completedLessons = [], progress 
           >
             Start Course
           </button>
+
+          {hasRelatedExperiments && (
+            <div className="related-lab-experiments">
+              <h4>Related Virtual Laboratory</h4>
+              <p>Explore these offline interactive experiments for {course.title}.</p>
+              <button
+                type="button"
+                className="related-lab-button"
+                onClick={onOpenVirtualLab}
+                disabled={!onOpenVirtualLab}
+              >
+                Open {course.title} experiments
+              </button>
+            </div>
+          )}
 
         </div>
       </div>

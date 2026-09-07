@@ -21,6 +21,7 @@ model User {
   sessions     Session[]
   resetTokens  PasswordResetToken[]
   verificationTokens EmailVerificationToken[]
+  learningProgress LearningProgress[]
 }
 
 model Role {
@@ -73,9 +74,37 @@ model EmailVerificationToken {
   @@index([expiresAt])
 }
 
+model LearningProgress {
+  id             String       @id @default(cuid())
+  userId         String
+  clientRecordId String
+  kind           ProgressKind
+  resourceId     String
+  status         ProgressStatus
+  occurredAt     DateTime
+  payload        Json?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, clientRecordId])
+  @@index([userId, kind, resourceId])
+  @@index([userId, updatedAt])
+}
+
 enum RoleName {
   STUDENT
   TEACHER
   SCHOOL_ADMIN
   PLATFORM_ADMIN
+}
+
+enum ProgressKind {
+  LESSON
+  LAB
+}
+
+enum ProgressStatus {
+  COMPLETED
+  IN_PROGRESS
 }

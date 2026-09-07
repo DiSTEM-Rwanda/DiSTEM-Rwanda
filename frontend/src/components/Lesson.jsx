@@ -1313,11 +1313,16 @@ function Lesson({
       Boolean(isCompleted)
     )
 
+  const [completionPending, setCompletionPending] =
+    useState(false)
+
   /*
    * Synchronize completion
    */
 
   useEffect(() => {
+    // This synchronizes state from an external parent prop.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCompleted(
       Boolean(isCompleted)
     )
@@ -1328,6 +1333,8 @@ function Lesson({
    */
 
   useEffect(() => {
+    // Resetting the local lesson UI is intentional when its identity changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCurrentConcept(0)
     setSelectedAnswer(null)
     setAnswerSubmitted(false)
@@ -1499,16 +1506,17 @@ function Lesson({
     setAnswerSubmitted(true)
   }
 
-  function finishLesson() {
-    if (!completed) {
-      setCompleted(true)
+  async function finishLesson() {
+    if (completed || completionPending) return
 
-      if (
-        typeof onComplete ===
-        'function'
-      ) {
-        onComplete(lesson)
+    setCompletionPending(true)
+    try {
+      if (typeof onComplete === 'function') {
+        await onComplete(lesson)
       }
+      setCompleted(true)
+    } finally {
+      setCompletionPending(false)
     }
   }
 
@@ -1527,7 +1535,7 @@ function Lesson({
     }
 
     if (isLast) {
-      finishLesson()
+      void finishLesson().catch(() => undefined)
       return
     }
 

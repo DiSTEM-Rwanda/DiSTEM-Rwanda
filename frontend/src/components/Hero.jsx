@@ -26,7 +26,7 @@ function Hero({ user }) {
         <p className="hero-text">
           DiSTEM Rwanda is an offline-first digital learning platform
           designed to bring quality STEM education to learners and
-          teachers, even where internet access is limited.
+          students, even where internet access is limited.
         </p>
 
         <div className="hero-buttons">
