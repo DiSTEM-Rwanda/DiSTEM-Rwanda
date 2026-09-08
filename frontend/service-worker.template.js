@@ -3,6 +3,10 @@
 const CACHE_PREFIX = 'distem-rwanda-app-shell'
 const CACHE_NAME = `${CACHE_PREFIX}-${__CACHE_VERSION__}`
 const PRECACHE_URLS = __PRECACHE_URLS__
+// Determine the index path that was precached (handles base prefixes like '/repo/')
+const INDEX_PATH =
+  (Array.isArray(PRECACHE_URLS) && PRECACHE_URLS.find((u) => u.endsWith('/index.html'))) ||
+  '/index.html'
 
 function isStaticAsset(request, url) {
   return (
@@ -73,13 +77,13 @@ self.addEventListener('fetch', (event) => {
         .then(async (response) => {
           if (response.ok) {
             const cache = await caches.open(CACHE_NAME)
-            await cacheResponse(cache, '/index.html', response)
+            await cacheResponse(cache, INDEX_PATH, response)
             return response
           }
 
-          return (await caches.match('/index.html')) || response
+          return (await caches.match(INDEX_PATH)) || response
         })
-        .catch(async () => (await caches.match('/index.html')) || Response.error()),
+        .catch(async () => (await caches.match(INDEX_PATH)) || Response.error()),
     )
     return
   }
