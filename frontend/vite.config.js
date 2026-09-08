@@ -8,19 +8,22 @@ const serviceWorkerTemplate = readFileSync(
   'utf8',
 )
 
-function pwaServiceWorker() {
+function pwaServiceWorker(base) {
   return {
     name: 'distem-pwa-service-worker',
     apply: 'build',
     generateBundle(_, bundle) {
+      const prefix = base.endsWith('/') ? base : `${base}/`
+
       const precacheUrls = [
-        '/',
-        '/index.html',
-        '/manifest.webmanifest',
-        '/icons/distem-icon-192.png',
-        '/icons/distem-icon-512.png',
-        ...Object.values(bundle).map(({ fileName }) => `/${fileName}`),
+        prefix,
+        `${prefix}index.html`,
+        `${prefix}manifest.webmanifest`,
+        `${prefix}icons/distem-icon-192.png`,
+        `${prefix}icons/distem-icon-512.png`,
+        ...Object.values(bundle).map(({ fileName }) => `${prefix}${fileName}`),
       ]
+
       const cacheVersion = createHash('sha256')
         .update(serviceWorkerTemplate)
         .update(precacheUrls.sort().join('|'))
@@ -38,6 +41,12 @@ function pwaServiceWorker() {
   }
 }
 
+const repoName = process.env.GITHUB_REPOSITORY
+  ? process.env.GITHUB_REPOSITORY.split('/')[1]
+  : 'DiSTEM-Rwanda'
+
+const base = process.env.NODE_ENV === 'production' ? `/${repoName}/` : '/'
+
 const apiProxy = {
   '/api': {
     target: 'http://localhost:4000',
@@ -48,7 +57,8 @@ const apiProxy = {
 // Keep production preview behavior aligned with development. In particular,
 // API requests must reach the backend rather than Vite's SPA fallback.
 export default defineConfig({
-  plugins: [react(), pwaServiceWorker()],
+  base,
+  plugins: [react(), pwaServiceWorker(base)],
   server: {
     proxy: apiProxy,
   },
