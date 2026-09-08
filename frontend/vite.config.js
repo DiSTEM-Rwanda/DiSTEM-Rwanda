@@ -43,9 +43,11 @@ function pwaServiceWorker(base) {
 
 const repoName = process.env.GITHUB_REPOSITORY
   ? process.env.GITHUB_REPOSITORY.split('/')[1]
-  : 'DiSTEM-Rwanda'
+  : process.env.npm_package_name || 'DiSTEM-Rwanda'
 
-const base = process.env.NODE_ENV === 'production' ? `/${repoName}/` : '/'
+const isUserPage = repoName && repoName.endsWith('.github.io')
+
+const base = process.env.NODE_ENV === 'production' ? (isUserPage ? '/' : `/${repoName}/`) : '/'
 
 const apiProxy = {
   '/api': {
